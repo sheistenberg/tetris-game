@@ -29,3 +29,24 @@ body {
     font-size: 14px;
     cursor: pointer;
 }
+/* Add to existing */
+body {
+    background: #222;
+    color: #eee;
+}
+#game-container {
+    background: #111;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+#sidebar {
+    color: #fff;
+}
+#sidebar button {
+    background: #4CAF50;
+    border: none;
+    border-radius: 4px;
+    color: white;
+}
+#sidebar button:hover {
+    background: #45a049;
+}
