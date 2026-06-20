@@ -9,6 +9,8 @@ canvas.height = ROWS * BLOCK_SIZE;
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const startBtn = document.getElementById('start-btn');
+const nextCanvas = document.getElementById('next-canvas');
+const nextCtx = nextCanvas.getContext('2d');
 
 // Tetromino shapes (each shape is a matrix of 0s and 1s)
 const SHAPES = [
@@ -61,6 +63,7 @@ const COLORS = [
 
 let grid = createEmptyGrid();
 let current = null;
+let next = null;
 let dropCounter = 0;
 let dropInterval = 1000; // ms
 let lastTime = 0;
@@ -160,15 +163,55 @@ function updateScore() {
 function placePiece() {
     merge(current.matrix, current.pos);
     clearLines();
-    current = resetPiece();
+    spawnPiece();
 }
 
-function resetPiece() {
+function randomPiece() {
     const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
     return {
         matrix: shape,
         pos: {x: Math.floor((COLS - shape[0].length) / 2), y: 0}
     };
+}
+
+// Promote the previewed piece to the active piece and queue a new one.
+function spawnPiece() {
+    current = next || randomPiece();
+    next = randomPiece();
+    drawNext();
+}
+
+// Render the upcoming piece in the sidebar preview, centered on its
+// filled cells.
+function drawNext() {
+    nextCtx.fillStyle = '#000';
+    nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+    if (!next) return;
+    const m = next.matrix;
+    let minX = m[0].length, maxX = -1, minY = m.length, maxY = -1;
+    for (let y = 0; y < m.length; y++) {
+        for (let x = 0; x < m[y].length; x++) {
+            if (m[y][x] !== 0) {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+    }
+    const offsetX = (nextCanvas.width - (maxX - minX + 1) * BLOCK_SIZE) / 2;
+    const offsetY = (nextCanvas.height - (maxY - minY + 1) * BLOCK_SIZE) / 2;
+    for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+            if (m[y][x] !== 0) {
+                nextCtx.fillStyle = COLORS[m[y][x]];
+                nextCtx.fillRect(offsetX + (x - minX) * BLOCK_SIZE,
+                                 offsetY + (y - minY) * BLOCK_SIZE,
+                                 BLOCK_SIZE - 1,
+                                 BLOCK_SIZE - 1);
+            }
+        }
+    }
 }
 
 function playerDrop() {
@@ -208,7 +251,8 @@ function update(time = 0) {
 function startGame() {
     if (rafId) return;
     grid = createEmptyGrid();
-    current = resetPiece();
+    next = null;
+    spawnPiece();
     score = 0;
     lines = 0;
     updateScore();
