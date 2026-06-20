@@ -50,3 +50,14 @@ body {
 #sidebar button:hover {
     background: #45a049;
 }
+#next-label {
+    margin-top: 16px;
+    font-weight: bold;
+}
+#next-canvas {
+    display: block;
+    margin-top: 6px;
+    background: #000;
+    border-radius: 4px;
+    image-rendering: pixelated;
+}
