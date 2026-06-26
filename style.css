@@ -1,52 +1,159 @@
+/* Reset and base styles */
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
 body {
     font-family: Arial, sans-serif;
     text-align: center;
-    background: #f0f0f0;
+    background: #222;
+    color: #eee;
     margin: 0;
-    padding: 20px;
-}
-#game-container {
-    display: inline-block;
-    background: #000;
     padding: 10px;
-    border-radius: 8px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* Prevent scroll interference on mobile */
+    overscroll-behavior: none;
 }
+
+#game-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+h1 {
+    margin: 0 0 10px 0;
+    font-size: 24px;
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #111;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
+
 #game-canvas {
     display: block;
     background: #111;
     image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
+
 #sidebar {
-    margin-left: 20px;
-    display: inline-block;
-    vertical-align: top;
+    width: 100%;
     color: #fff;
     font-size: 16px;
+    padding: 10px 0;
 }
+
+#sidebar > div {
+    margin: 5px 0;
+}
+
 #sidebar button {
     margin-top: 10px;
-    padding: 8px 16px;
-    font-size: 14px;
+    padding: 12px 24px;
+    font-size: 16px;
     cursor: pointer;
-}
-/* Add to existing */
-body {
-    background: #222;
-    color: #eee;
-}
-#game-container {
-    background: #111;
-    box-shadow: 0 0 15px rgba(0,0,0,0.5);
-}
-#sidebar {
-    color: #fff;
-}
-#sidebar button {
     background: #4CAF50;
     border: none;
     border-radius: 4px;
     color: white;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 }
+
 #sidebar button:hover {
     background: #45a049;
+}
+
+#sidebar button:active {
+    background: #3d8b40;
+}
+
+#sidebar button:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+/* Mobile touch controls */
+#mobile-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 15px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.control-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.control-btn {
+    width: 70px;
+    height: 60px;
+    font-size: 24px;
+    border: none;
+    border-radius: 8px;
+    background: #444;
+    color: #fff;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn:active {
+    background: #666;
+    transform: scale(0.95);
+}
+
+/* Desktop styles */
+@media (min-width: 600px) {
+    body {
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 32px;
+        margin-bottom: 20px;
+    }
+
+    #game-container {
+        flex-direction: row;
+        padding: 15px;
+        gap: 20px;
+    }
+
+    #sidebar {
+        width: auto;
+        min-width: 120px;
+        text-align: left;
+        padding: 0;
+    }
+
+    #sidebar button {
+        width: 100%;
+    }
+
+    #mobile-controls {
+        display: none;
+    }
 }
