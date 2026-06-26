@@ -1,6 +1,10 @@
 {
   "version": 1,
-  "app": "tetris-game",
-  "dockerfilePath": "Dockerfile",
-  "domain": "tetris-game.nexrahq.com"
+  "apps": [
+    {
+      "name": "tetris-game",
+      "dockerfilePath": "Dockerfile",
+      "domains": ["tetris-game.nexrahq.com"]
+    }
+  ]
 }
