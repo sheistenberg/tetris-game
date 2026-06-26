@@ -8,6 +8,7 @@ canvas.width = COLS * BLOCK_SIZE;
 canvas.height = ROWS * BLOCK_SIZE;
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
+const levelEl = document.getElementById('level');
 const startBtn = document.getElementById('start-btn');
 
 // Tetromino shapes (each shape is a matrix of 0s and 1s)
@@ -66,6 +67,7 @@ let dropInterval = 1000; // ms
 let lastTime = 0;
 let score = 0;
 let lines = 0;
+let level = 1;
 let rafId = null;
 
 function createEmptyGrid() {
@@ -148,6 +150,7 @@ function clearLines() {
     if (linesCleared > 0) {
         lines += linesCleared;
         score += linesCleared * 100; // simple scoring
+        level = Math.floor(lines / 10) + 1;
         updateScore();
     }
 }
@@ -155,6 +158,7 @@ function clearLines() {
 function updateScore() {
     scoreEl.textContent = score;
     linesEl.textContent = lines;
+    levelEl.textContent = level;
 }
 
 function placePiece() {
@@ -211,6 +215,7 @@ function startGame() {
     current = resetPiece();
     score = 0;
     lines = 0;
+    level = 1;
     updateScore();
     dropInterval = 1000;
     lastTime = performance.now();
