@@ -190,7 +190,8 @@ function clearLines() {
     }
     if (linesCleared > 0) {
         lines += linesCleared;
-        score += linesCleared * 100 * level; // scoring with level multiplier
+        score += linesCleared * 100; // simple scoring
+        level = Math.floor(lines / 10) + 1;
         updateScore();
     }
 }
@@ -198,11 +199,7 @@ function clearLines() {
 function updateScore() {
     scoreEl.textContent = score;
     linesEl.textContent = lines;
-    // Simple level progression: level up every 10 lines
-    level = Math.floor(lines / 10) + 1;
     levelEl.textContent = level;
-    // Increase speed with level
-    dropInterval = Math.max(100, 1000 - (level - 1) * 100);
 }
 
 function placePiece() {

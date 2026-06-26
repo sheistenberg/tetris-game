@@ -7,26 +7,14 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-wrapper">
-        <h1>Tetris</h1>
-        <div id="game-container">
-            <canvas id="game-canvas"></canvas>
-            <div id="sidebar">
-                <div>Score: <span id="score">0</span></div>
-                <div>Lines: <span id="lines">0</span></div>
-                <div>Level: <span id="level">1</span></div>
-                <button id="start-btn">Start</button>
-            </div>
-        </div>
-        <div id="mobile-controls">
-            <div class="control-row">
-                <button id="btn-rotate" class="control-btn" data-action="rotate">↻</button>
-            </div>
-            <div class="control-row">
-                <button id="btn-left" class="control-btn" data-action="left">◀</button>
-                <button id="btn-down" class="control-btn" data-action="down">▼</button>
-                <button id="btn-right" class="control-btn" data-action="right">▶</button>
-            </div>
+    <h1>Tetris</h1>
+    <div id="game-container">
+        <canvas id="game-canvas" width="240" height="400"></canvas>
+        <div id="sidebar">
+            <div>Score: <span id="score">0</span></div>
+            <div>Lines: <span id="lines">0</span></div>
+            <div>Level: <span id="level">1</span></div>
+            <button id="start-btn">Start</button>
         </div>
     </div>
     <script src="script.js"></script>
