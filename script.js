@@ -1,15 +1,19 @@
 // Constants
 const COLS = 10;
 const ROWS = 20;
-const BLOCK_SIZE = 24; // pixels
+const MIN_BLOCK_SIZE = 16;
+const MAX_BLOCK_SIZE = 30;
+const PADDING = 8;
+
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
-canvas.width = COLS * BLOCK_SIZE;
-canvas.height = ROWS * BLOCK_SIZE;
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
 const startBtn = document.getElementById('start-btn');
+
+// Dynamic block size
+let BLOCK_SIZE = 24;
 
 // Tetromino shapes (each shape is a matrix of 0s and 1s)
 const SHAPES = [
@@ -69,6 +73,43 @@ let score = 0;
 let lines = 0;
 let level = 1;
 let rafId = null;
+
+// Calculate block size based on viewport
+function calculateBlockSize() {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Available width for canvas (accounting for padding)
+    const availableWidth = viewportWidth - (PADDING * 2) - 20; // 20px for sidebar on mobile
+    // Available height for canvas (accounting for header, sidebar, controls)
+    const headerHeight = 80; // h1 + margins
+    const sidebarHeight = 120; // score/lines/level + button
+    const controlsHeight = viewportWidth < 600 ? 180 : 0; // mobile controls
+    const availableHeight = viewportHeight - headerHeight - sidebarHeight - controlsHeight - (PADDING * 2);
+    
+    // Calculate based on width and height constraints
+    const sizeFromWidth = Math.floor(availableWidth / COLS);
+    const sizeFromHeight = Math.floor(availableHeight / ROWS);
+    
+    // Use the smaller one to ensure it fits
+    let newSize = Math.min(sizeFromWidth, sizeFromHeight);
+    
+    // Clamp to min/max
+    newSize = Math.max(MIN_BLOCK_SIZE, Math.min(MAX_BLOCK_SIZE, newSize));
+    
+    BLOCK_SIZE = newSize;
+}
+
+// Resize canvas based on current block size
+function resizeCanvas() {
+    calculateBlockSize();
+    canvas.width = COLS * BLOCK_SIZE;
+    canvas.height = ROWS * BLOCK_SIZE;
+    // Redraw if game is running
+    if (rafId) {
+        draw();
+    }
+}
 
 function createEmptyGrid() {
     return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -229,8 +270,13 @@ function endGame() {
     startBtn.disabled = false;
 }
 
-// Input handling
+// Input handling - Keyboard
 document.addEventListener('keydown', event => {
+    // Prevent arrow keys from scrolling
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        event.preventDefault();
+    }
+    
     if (!rafId) return;
     switch (event.key) {
         case 'ArrowLeft':
@@ -248,7 +294,52 @@ document.addEventListener('keydown', event => {
     }
 });
 
+// Mobile touch controls
+document.querySelectorAll('.control-btn').forEach(btn => {
+    btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (!rafId) return;
+        
+        const action = btn.dataset.action;
+        switch (action) {
+            case 'left':
+                playerMove(-1);
+                break;
+            case 'right':
+                playerMove(1);
+                break;
+            case 'rotate':
+                playerRotate();
+                break;
+            case 'down':
+                playerDrop();
+                break;
+        }
+    });
+});
+
 startBtn.addEventListener('click', () => {
     startBtn.disabled = true;
     startGame();
 });
+
+// Handle resize and orientation change
+window.addEventListener('resize', () => {
+    resizeCanvas();
+});
+
+// Handle orientation change (mainly for mobile)
+window.addEventListener('orientationchange', () => {
+    // Small delay to let the browser update viewport dimensions
+    setTimeout(resizeCanvas, 100);
+});
+
+// Prevent context menu on long press (mobile)
+document.addEventListener('contextmenu', (e) => {
+    if (e.target.classList.contains('control-btn')) {
+        e.preventDefault();
+    }
+});
+
+// Initialize canvas size on load
+resizeCanvas();
