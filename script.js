@@ -10,7 +10,6 @@ const SCORE_TABLE = [0, 40, 100, 300, 1200];
 const LEVEL_SPEED_EXP = 0.85;
 const MIN_DROP_INTERVAL = 80; // ms
 const PREVIEW_BLOCK = 20;
-const PREVIEW_PADDING = 6;
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -287,8 +286,8 @@ function clearLines() {
         y++; // recheck same line index after shift
     }
     if (linesCleared > 0) {
-        const newLevel = Math.floor(lines / 10) + 1;
         lines += linesCleared;
+        const newLevel = Math.floor(lines / 10) + 1;
         score += SCORE_TABLE[linesCleared] * level;
         if (newLevel !== level) {
             level = newLevel;
@@ -354,7 +353,6 @@ function refillQueue() {
 function nextFromQueue() {
     refillQueue();
     const piece = queue.shift();
-    refillQueue();
     return {
         matrix: piece.matrix,
         index: piece.index,
