@@ -289,7 +289,7 @@ function clearLines() {
     if (linesCleared > 0) {
         const newLevel = Math.floor(lines / 10) + 1;
         lines += linesCleared;
-        score += linesCleared * 100; // simple scoring; replaced by classic table in P1
+        score += SCORE_TABLE[linesCleared] * level;
         if (newLevel !== level) {
             level = newLevel;
             dropInterval = computeDropInterval(level);
