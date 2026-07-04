@@ -25,6 +25,7 @@ const highScoreEl = document.getElementById('high-score');
 const finalScoreEl = document.getElementById('final-score');
 const finalHighEl = document.getElementById('final-high');
 const gameOverEl = document.getElementById('game-over');
+const pausedEl = document.getElementById('paused');
 const restartBtn = document.getElementById('restart-btn');
 const startBtn = document.getElementById('start-btn');
 
@@ -94,6 +95,7 @@ let bag = [];
 let heldPiece = null;
 let canHold = true;
 let currentHighScore = 0;
+let paused = false;
 
 // Calculate block size based on viewport
 function calculateBlockSize() {
@@ -390,12 +392,23 @@ function playerRotate() {
 function update(time = 0) {
     const delta = time - lastTime;
     lastTime = time;
+    if (paused) {
+        draw();
+        rafId = requestAnimationFrame(update);
+        return;
+    }
     dropCounter += delta;
     if (dropCounter > dropInterval) {
         playerDrop();
     }
     draw();
     rafId = requestAnimationFrame(update);
+}
+
+function togglePause() {
+    if (!rafId) return;
+    paused = !paused;
+    pausedEl.hidden = !paused;
 }
 
 function startGame() {
@@ -405,6 +418,8 @@ function startGame() {
     queue = [];
     heldPiece = null;
     canHold = true;
+    paused = false;
+    pausedEl.hidden = true;
     current = resetPiece();
     score = 0;
     lines = 0;
@@ -421,6 +436,8 @@ function triggerGameOver() {
         cancelAnimationFrame(rafId);
         rafId = null;
     }
+    paused = false;
+    pausedEl.hidden = true;
     const high = readHighScore();
     const newHigh = score > high;
     if (newHigh) writeHighScore(score);
@@ -444,6 +461,11 @@ document.addEventListener('keydown', event => {
     }
     
     if (!rafId) return;
+    if (event.key === 'p' || event.key === 'P') {
+        togglePause();
+        return;
+    }
+    if (paused) return;
     switch (event.key) {
         case 'ArrowLeft':
             playerMove(-1);
@@ -486,6 +508,9 @@ document.querySelectorAll('.control-btn').forEach(btn => {
                 break;
             case 'hard-drop':
                 playerHardDrop();
+                break;
+            case 'pause':
+                togglePause();
                 break;
         }
     });
