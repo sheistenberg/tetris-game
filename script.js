@@ -199,11 +199,39 @@ function drawHold() {
     drawPieceInCanvas(holdCtx, SHAPES[heldPiece], holdCanvas.width);
 }
 
+function getGhostPos() {
+    let y = current.pos.y;
+    while (isValidMove(current.matrix, {x: current.pos.x, y: y + 1})) {
+        y++;
+    }
+    return {x: current.pos.x, y: y};
+}
+
+function drawGhost(matrix, pos) {
+    matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) {
+                ctx.fillStyle = COLORS[value];
+                ctx.globalAlpha = 0.25;
+                ctx.fillRect((x + pos.x) * BLOCK_SIZE,
+                             (y + pos.y) * BLOCK_SIZE,
+                             BLOCK_SIZE - 1,
+                             BLOCK_SIZE - 1);
+                ctx.globalAlpha = 1;
+            }
+        });
+    });
+}
+
 function draw() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     drawMatrix(grid, {x: 0, y: 0});
     if (current) {
+        const ghost = getGhostPos();
+        if (ghost.y !== current.pos.y) {
+            drawGhost(current.matrix, ghost);
+        }
         drawMatrix(current.matrix, current.pos);
     }
 }
