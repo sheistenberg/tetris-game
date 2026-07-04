@@ -15,7 +15,38 @@
             <div>Lines: <span id="lines">0</span></div>
             <div>Level: <span id="level">1</span></div>
             <button id="start-btn">Start</button>
+            <div id="next-piece-label">Next:</div>
+            <canvas id="next-canvas" width="96" height="96"></canvas>
+            <div id="hold-piece-label">Hold:</div>
+            <canvas id="hold-canvas" width="96" height="96"></canvas>
+            <div id="high-score-row">High: <span id="high-score">0</span></div>
         </div>
+    </div>
+    <div id="mobile-controls">
+        <div class="control-row">
+            <button class="control-btn" data-action="left" aria-label="Move left">&#9664;</button>
+            <button class="control-btn" data-action="rotate" aria-label="Rotate">&#8635;</button>
+            <button class="control-btn" data-action="right" aria-label="Move right">&#9654;</button>
+        </div>
+        <div class="control-row">
+            <button class="control-btn" data-action="down" aria-label="Soft drop">&#9660;</button>
+            <button class="control-btn" data-action="hard-drop" aria-label="Hard drop">&#10515;</button>
+        </div>
+        <div class="control-row">
+            <button class="control-btn" data-action="hold" aria-label="Hold">H</button>
+            <button class="control-btn" data-action="pause" aria-label="Pause">II</button>
+        </div>
+    </div>
+    <div id="game-over" hidden>
+        <div id="game-over-panel">
+            <h2>Game Over</h2>
+            <div>Score: <span id="final-score">0</span></div>
+            <div>High: <span id="final-high">0</span></div>
+            <button id="restart-btn">Restart</button>
+        </div>
+    </div>
+    <div id="paused" hidden>
+        <div id="paused-panel">Paused</div>
     </div>
     <script src="script.js"></script>
 </body>
