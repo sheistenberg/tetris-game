@@ -488,6 +488,12 @@ function togglePause() {
     if (!rafId) return;
     paused = !paused;
     pausedEl.hidden = !paused;
+    if (paused) {
+        // Land focus on the Resume button so keyboard / screen-reader users
+        // can immediately press Enter. Deferred so the panel is visible when
+        // focus moves (otherwise the browser may scroll or skip the focus).
+        setTimeout(() => resumeBtn.focus(), 0);
+    }
 }
 
 function startGame() {
@@ -613,7 +619,7 @@ restartBtn.addEventListener('click', () => {
 });
 
 resumeBtn.addEventListener('click', () => {
-    if (paused) togglePause();
+    togglePause();
 });
 
 // Handle resize and orientation change
