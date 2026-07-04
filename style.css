@@ -59,7 +59,12 @@ h1 {
     min-height: 0;       /* allow children to shrink inside a 1fr row */
     min-width: 0;
     display: grid;
-    grid-template-columns: 1fr auto;
+    /* Board and sidebar are sized to their content and sit adjacent, so
+       there is no gap of .game-area background between them. justify-content
+       centers the content in the .game-area when the row is wider than the
+       content (e.g. desktop). */
+    grid-template-columns: auto auto;
+    justify-content: center;
     gap: 8px;
     background: #111;
     border-radius: 8px;
@@ -76,7 +81,13 @@ h1 {
        board must be allowed to shrink below the canvas's intrinsic size —
        otherwise the canvas's 240x400 attribute size (boosted to 1:2 by the
        board's old aspect-ratio) overflows the cell and lands on top of the
-       on-screen controls. JS sets the canvas dimensions inside this box. */
+       on-screen controls. JS sets the canvas dimensions inside this box
+       AND sizes the board to (canvas + 2 borders) so the board's #000
+       background never shows past the canvas edges. Without that JS sizing
+       the board fills the grid cell and the canvas is centered inside it,
+       leaving a strip of #000 on each side of the canvas that looks like
+       extra, unplayable columns. max-width: 100% keeps the board inside
+       its grid cell on viewports too narrow to hold the canvas. */
     min-width: 0;
     min-height: 0;
     display: flex;
@@ -85,6 +96,7 @@ h1 {
     background: #000;
     border: 1px solid #333;
     box-sizing: border-box;
+    max-width: 100%;
 }
 
 #game-canvas {
@@ -264,7 +276,7 @@ h1 {
     }
 
     .game-area {
-        grid-template-columns: 1fr auto;
+        grid-template-columns: auto auto;
         grid-template-rows: 1fr auto;
         gap: 6px;
         padding: 6px;
@@ -318,7 +330,7 @@ h1 {
     }
 
     .game-area {
-        grid-template-columns: 1fr auto;
+        grid-template-columns: auto auto;
         gap: 20px;
         padding: 16px;
     }
@@ -395,17 +407,8 @@ h1 {
     display: none;
 }
 
-#paused-panel {
-    background: #1a1a1a;
-    color: #fff;
-    border: 2px solid #555;
-    border-radius: 8px;
-    padding: 18px 36px;
-    font-size: 24px;
-    letter-spacing: 2px;
-}
-
-#game-over-panel {
+/* Shared modal-panel styles for the pause and game-over overlays. */
+.modal-panel {
     background: #1a1a1a;
     color: #fff;
     border: 2px solid #555;
@@ -416,17 +419,12 @@ h1 {
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
 }
 
-#game-over-panel h2 {
+.modal-panel h2 {
     margin: 0 0 12px 0;
     font-size: 28px;
 }
 
-#game-over-panel > div {
-    margin: 6px 0;
-    font-size: 18px;
-}
-
-#game-over-panel button {
+.modal-panel button {
     margin-top: 16px;
     padding: 10px 24px;
     font-size: 16px;
@@ -438,6 +436,17 @@ h1 {
     touch-action: manipulation;
 }
 
-#game-over-panel button:hover {
+.modal-panel button:hover {
     background: #45a049;
+}
+
+/* Pause panel: match the original letter-spacing on the heading. */
+#paused-panel h2 {
+    letter-spacing: 2px;
+}
+
+/* Game-over panel: extra score / high-score rows below the heading. */
+#game-over-panel > div {
+    margin: 6px 0;
+    font-size: 18px;
 }

@@ -27,45 +27,48 @@ const gameOverEl = document.getElementById('game-over');
 const pausedEl = document.getElementById('paused');
 const restartBtn = document.getElementById('restart-btn');
 const startBtn = document.getElementById('start-btn');
+const resumeBtn = document.getElementById('resume-btn');
 
 // Dynamic block size
 let BLOCK_SIZE = 24;
 
-// Tetromino shapes (each shape is a matrix of 0s and 1s)
+// Tetromino shapes (each shape is a matrix; non-zero cells are the piece's
+// 1-based color index so the COLORS lookup in drawMatrix() renders each
+// tetromino in its own color).
 const SHAPES = [
-    [ // I
+    [ // I  (color index 1)
         [0,0,0,0],
         [1,1,1,1],
         [0,0,0,0],
         [0,0,0,0]
     ],
-    [ // J
-        [1,0,0],
-        [1,1,1],
+    [ // J  (color index 2)
+        [2,0,0],
+        [2,2,2],
         [0,0,0]
     ],
-    [ // L
-        [0,0,1],
-        [1,1,1],
+    [ // L  (color index 3)
+        [0,0,3],
+        [3,3,3],
         [0,0,0]
     ],
-    [ // O
-        [1,1],
-        [1,1]
+    [ // O  (color index 4)
+        [4,4],
+        [4,4]
     ],
-    [ // S
-        [0,1,1],
-        [1,1,0],
+    [ // S  (color index 5)
+        [0,5,5],
+        [5,5,0],
         [0,0,0]
     ],
-    [ // T
-        [0,1,0],
-        [1,1,1],
+    [ // T  (color index 6)
+        [0,6,0],
+        [6,6,6],
         [0,0,0]
     ],
-    [ // Z
-        [1,1,0],
-        [0,1,1],
+    [ // Z  (color index 7)
+        [7,7,0],
+        [0,7,7],
         [0,0,0]
     ]
 ];
@@ -122,6 +125,12 @@ function resizeCanvas() {
     canvas.height = cssH;
     canvas.style.width = cssW + 'px';
     canvas.style.height = cssH + 'px';
+    // Size the board to the canvas + borders. Without this the board fills
+    // the 1fr grid cell and the canvas is flex-centered inside it, leaving
+    // a strip of #000 on each side of the canvas that looks like extra
+    // unplayable columns. max-width: 100% in CSS caps the board to the
+    // cell width on viewports too narrow to hold the canvas.
+    boardEl.style.width = (cssW + 2) + 'px';
 
     // Sync the next/hold preview internal size to the displayed size so the
     // previews stay crisp on both mobile (small) and desktop (larger) layouts.
@@ -479,6 +488,12 @@ function togglePause() {
     if (!rafId) return;
     paused = !paused;
     pausedEl.hidden = !paused;
+    if (paused) {
+        // Land focus on the Resume button so keyboard / screen-reader users
+        // can immediately press Enter. Deferred so the panel is visible when
+        // focus moves (otherwise the browser may scroll or skip the focus).
+        setTimeout(() => resumeBtn.focus(), 0);
+    }
 }
 
 function startGame() {
@@ -601,6 +616,10 @@ startBtn.addEventListener('click', () => {
 restartBtn.addEventListener('click', () => {
     startBtn.disabled = true;
     restartGame();
+});
+
+resumeBtn.addEventListener('click', () => {
+    togglePause();
 });
 
 // Handle resize and orientation change
