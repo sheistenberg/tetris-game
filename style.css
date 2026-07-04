@@ -76,7 +76,13 @@ h1 {
        board must be allowed to shrink below the canvas's intrinsic size —
        otherwise the canvas's 240x400 attribute size (boosted to 1:2 by the
        board's old aspect-ratio) overflows the cell and lands on top of the
-       on-screen controls. JS sets the canvas dimensions inside this box. */
+       on-screen controls. JS sets the canvas dimensions inside this box
+       AND sizes the board to (canvas + 2 borders) so the board's #000
+       background never shows past the canvas edges. Without that JS sizing
+       the board fills the grid cell and the canvas is centered inside it,
+       leaving a strip of #000 on each side of the canvas that looks like
+       extra, unplayable columns. max-width: 100% keeps the board inside
+       its grid cell on viewports too narrow to hold the canvas. */
     min-width: 0;
     min-height: 0;
     display: flex;
@@ -85,6 +91,7 @@ h1 {
     background: #000;
     border: 1px solid #333;
     box-sizing: border-box;
+    max-width: 100%;
 }
 
 #game-canvas {

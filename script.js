@@ -125,6 +125,12 @@ function resizeCanvas() {
     canvas.height = cssH;
     canvas.style.width = cssW + 'px';
     canvas.style.height = cssH + 'px';
+    // Size the board to the canvas + borders. Without this the board fills
+    // the 1fr grid cell and the canvas is flex-centered inside it, leaving
+    // a strip of #000 on each side of the canvas that looks like extra
+    // unplayable columns. max-width: 100% in CSS caps the board to the
+    // cell width on viewports too narrow to hold the canvas.
+    boardEl.style.width = (cssW + 2) + 'px';
 
     // Sync the next/hold preview internal size to the displayed size so the
     // previews stay crisp on both mobile (small) and desktop (larger) layouts.
