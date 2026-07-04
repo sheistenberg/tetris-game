@@ -27,45 +27,48 @@ const gameOverEl = document.getElementById('game-over');
 const pausedEl = document.getElementById('paused');
 const restartBtn = document.getElementById('restart-btn');
 const startBtn = document.getElementById('start-btn');
+const resumeBtn = document.getElementById('resume-btn');
 
 // Dynamic block size
 let BLOCK_SIZE = 24;
 
-// Tetromino shapes (each shape is a matrix of 0s and 1s)
+// Tetromino shapes (each shape is a matrix; non-zero cells are the piece's
+// 1-based color index so the COLORS lookup in drawMatrix() renders each
+// tetromino in its own color).
 const SHAPES = [
-    [ // I
+    [ // I  (color index 1)
         [0,0,0,0],
         [1,1,1,1],
         [0,0,0,0],
         [0,0,0,0]
     ],
-    [ // J
-        [1,0,0],
-        [1,1,1],
+    [ // J  (color index 2)
+        [2,0,0],
+        [2,2,2],
         [0,0,0]
     ],
-    [ // L
-        [0,0,1],
-        [1,1,1],
+    [ // L  (color index 3)
+        [0,0,3],
+        [3,3,3],
         [0,0,0]
     ],
-    [ // O
-        [1,1],
-        [1,1]
+    [ // O  (color index 4)
+        [4,4],
+        [4,4]
     ],
-    [ // S
-        [0,1,1],
-        [1,1,0],
+    [ // S  (color index 5)
+        [0,5,5],
+        [5,5,0],
         [0,0,0]
     ],
-    [ // T
-        [0,1,0],
-        [1,1,1],
+    [ // T  (color index 6)
+        [0,6,0],
+        [6,6,6],
         [0,0,0]
     ],
-    [ // Z
-        [1,1,0],
-        [0,1,1],
+    [ // Z  (color index 7)
+        [7,7,0],
+        [0,7,7],
         [0,0,0]
     ]
 ];
@@ -601,6 +604,10 @@ startBtn.addEventListener('click', () => {
 restartBtn.addEventListener('click', () => {
     startBtn.disabled = true;
     restartGame();
+});
+
+resumeBtn.addEventListener('click', () => {
+    if (paused) togglePause();
 });
 
 // Handle resize and orientation change
