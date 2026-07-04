@@ -191,12 +191,12 @@ function drawNext() {
 }
 
 function drawHold() {
-    if (!heldPiece) {
+    if (heldPiece === null) {
         holdCtx.fillStyle = '#000';
         holdCtx.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
         return;
     }
-    drawPieceInCanvas(holdCtx, heldPiece.matrix, holdCanvas.width);
+    drawPieceInCanvas(holdCtx, SHAPES[heldPiece], holdCanvas.width);
 }
 
 function draw() {
@@ -389,6 +389,38 @@ function playerRotate() {
     }
 }
 
+function pieceFromIndex(index) {
+    const shape = SHAPES[index];
+    return {
+        matrix: shape,
+        index: index,
+        pos: {x: Math.floor((COLS - shape[0].length) / 2), y: 0}
+    };
+}
+
+function holdPiece() {
+    if (!canHold) return;
+    if (heldPiece === null) {
+        heldPiece = current.index;
+        const next = nextFromQueue();
+        if (!isValidMove(next.matrix, next.pos)) {
+            current = next;
+            triggerGameOver();
+            return;
+        }
+        canHold = false;
+        current = next;
+        drawNext();
+    } else {
+        const prevHeld = heldPiece;
+        heldPiece = current.index;
+        const swapped = pieceFromIndex(prevHeld);
+        canHold = false;
+        current = swapped;
+    }
+    drawHold();
+}
+
 function update(time = 0) {
     const delta = time - lastTime;
     lastTime = time;
@@ -466,6 +498,10 @@ document.addEventListener('keydown', event => {
         return;
     }
     if (paused) return;
+    if (event.key === 'c' || event.key === 'C') {
+        holdPiece();
+        return;
+    }
     switch (event.key) {
         case 'ArrowLeft':
             playerMove(-1);
@@ -511,6 +547,9 @@ document.querySelectorAll('.control-btn').forEach(btn => {
                 break;
             case 'pause':
                 togglePause();
+                break;
+            case 'hold':
+                holdPiece();
                 break;
         }
     });
