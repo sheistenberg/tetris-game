@@ -4,9 +4,20 @@ const ROWS = 20;
 const MIN_BLOCK_SIZE = 16;
 const MAX_BLOCK_SIZE = 30;
 const PADDING = 8;
+const QUEUE_SIZE = 4;
+const HIGH_SCORE_KEY = 'tetris:highScore';
+const SCORE_TABLE = [0, 40, 100, 300, 1200];
+const LEVEL_SPEED_EXP = 0.85;
+const MIN_DROP_INTERVAL = 80; // ms
+const PREVIEW_BLOCK = 20;
+const PREVIEW_PADDING = 6;
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
+const nextCanvas = document.getElementById('next-canvas');
+const nextCtx = nextCanvas.getContext('2d');
+const holdCanvas = document.getElementById('hold-canvas');
+const holdCtx = holdCanvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
@@ -73,6 +84,10 @@ let score = 0;
 let lines = 0;
 let level = 1;
 let rafId = null;
+let queue = [];
+let bag = [];
+let heldPiece = null;
+let canHold = true;
 
 // Calculate block size based on viewport
 function calculateBlockSize() {
@@ -115,18 +130,65 @@ function createEmptyGrid() {
     return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 }
 
-function drawMatrix(matrix, offset) {
+function drawMatrix(matrix, offset, targetCtx, blockSize) {
+    const context = targetCtx || ctx;
+    const size = blockSize || BLOCK_SIZE;
     matrix.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value !== 0) {
-                ctx.fillStyle = COLORS[value];
-                ctx.fillRect((x + offset.x) * BLOCK_SIZE,
-                             (y + offset.y) * BLOCK_SIZE,
-                             BLOCK_SIZE - 1,
-                             BLOCK_SIZE - 1);
+                context.fillStyle = COLORS[value];
+                context.fillRect((x + offset.x) * size,
+                                 (y + offset.y) * size,
+                                 size - 1,
+                                 size - 1);
             }
         });
     });
+}
+
+function drawPieceInCanvas(targetCtx, matrix, canvasSize) {
+    targetCtx.fillStyle = '#000';
+    targetCtx.fillRect(0, 0, canvasSize, canvasSize);
+
+    // Find bounding box of filled cells to centre the piece
+    let minX = matrix[0].length, minY = matrix.length, maxX = -1, maxY = -1;
+    matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) {
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+        });
+    });
+    if (maxX < 0) return;
+    const pieceW = maxX - minX + 1;
+    const pieceH = maxY - minY + 1;
+    const totalW = pieceW * PREVIEW_BLOCK;
+    const totalH = pieceH * PREVIEW_BLOCK;
+    const offsetX = Math.floor((canvasSize - totalW) / 2 / PREVIEW_BLOCK) - minX;
+    const offsetY = Math.floor((canvasSize - totalH) / 2 / PREVIEW_BLOCK) - minY;
+    drawMatrix(matrix, {x: offsetX, y: offsetY}, targetCtx, PREVIEW_BLOCK);
+}
+
+function drawNext() {
+    const piece = queue.length > 0 ? queue[0] : null;
+    if (!piece) {
+        nextCtx.fillStyle = '#000';
+        nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+        return;
+    }
+    drawPieceInCanvas(nextCtx, piece.matrix, nextCanvas.width);
+}
+
+function drawHold() {
+    if (!heldPiece) {
+        holdCtx.fillStyle = '#000';
+        holdCtx.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
+        return;
+    }
+    drawPieceInCanvas(holdCtx, heldPiece.matrix, holdCanvas.width);
 }
 
 function draw() {
@@ -202,6 +264,38 @@ function updateScore() {
     levelEl.textContent = level;
 }
 
+function refillBag() {
+    const next = [0, 1, 2, 3, 4, 5, 6];
+    for (let i = next.length - 1; i > 0; --i) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [next[i], next[j]] = [next[j], next[i]];
+    }
+    bag.push(...next);
+}
+
+function refillQueue() {
+    while (queue.length < QUEUE_SIZE) {
+        if (bag.length === 0) refillBag();
+        const idx = bag.shift();
+        const shape = SHAPES[idx];
+        queue.push({
+            index: idx,
+            matrix: shape
+        });
+    }
+}
+
+function nextFromQueue() {
+    refillQueue();
+    const piece = queue.shift();
+    refillQueue();
+    return {
+        matrix: piece.matrix,
+        index: piece.index,
+        pos: {x: Math.floor((COLS - piece.matrix[0].length) / 2), y: 0}
+    };
+}
+
 function placePiece() {
     merge(current.matrix, current.pos);
     clearLines();
@@ -209,11 +303,10 @@ function placePiece() {
 }
 
 function resetPiece() {
-    const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-    return {
-        matrix: shape,
-        pos: {x: Math.floor((COLS - shape[0].length) / 2), y: 0}
-    };
+    const piece = nextFromQueue();
+    canHold = true;
+    drawNext();
+    return piece;
 }
 
 function playerDrop() {
