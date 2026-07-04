@@ -362,6 +362,17 @@ function playerDrop() {
     dropCounter = 0;
 }
 
+function playerHardDrop() {
+    let cellsDropped = 0;
+    while (isValidMove(current.matrix, {x: current.pos.x, y: current.pos.y + 1})) {
+        current.pos.y++;
+        cellsDropped++;
+    }
+    if (cellsDropped > 0) score += cellsDropped * 2;
+    placePiece();
+    dropCounter = 0;
+}
+
 function playerMove(dir) {
     current.pos.x += dir;
     if (!isValidMove(current.matrix, current.pos)) {
@@ -428,7 +439,7 @@ function restartGame() {
 // Input handling - Keyboard
 document.addEventListener('keydown', event => {
     // Prevent arrow keys from scrolling
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
         event.preventDefault();
     }
     
@@ -445,6 +456,10 @@ document.addEventListener('keydown', event => {
             break;
         case 'ArrowUp':
             playerRotate();
+            break;
+        case ' ':
+            if (event.repeat) return;
+            playerHardDrop();
             break;
     }
 });
@@ -468,6 +483,9 @@ document.querySelectorAll('.control-btn').forEach(btn => {
                 break;
             case 'down':
                 playerDrop();
+                break;
+            case 'hard-drop':
+                playerHardDrop();
                 break;
         }
     });
