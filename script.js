@@ -9,10 +9,10 @@ const HIGH_SCORE_KEY = 'tetris:highScore';
 const SCORE_TABLE = [0, 40, 100, 300, 1200];
 const LEVEL_SPEED_EXP = 0.85;
 const MIN_DROP_INTERVAL = 80; // ms
-const PREVIEW_BLOCK = 20;
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
+const boardEl = document.getElementById('board');
 const nextCanvas = document.getElementById('next-canvas');
 const nextCtx = nextCanvas.getContext('2d');
 const holdCanvas = document.getElementById('hold-canvas');
@@ -96,41 +96,47 @@ let canHold = true;
 let currentHighScore = 0;
 let paused = false;
 
-// Calculate block size based on viewport
+// Measure the rendered #board element and pick a block size that fits both
+// axes. Uses clientWidth/clientHeight (the content box, which excludes the
+// 1px border) so the block math reflects the space actually available to
+// the canvas inside the board.
 function calculateBlockSize() {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    // Available width for canvas (accounting for padding)
-    const availableWidth = viewportWidth - (PADDING * 2) - 20; // 20px for sidebar on mobile
-    // Available height for canvas (accounting for header, sidebar, controls)
-    const headerHeight = 80; // h1 + margins
-    const sidebarHeight = 120; // score/lines/level + button
-    const controlsHeight = viewportWidth < 600 ? 180 : 0; // mobile controls
-    const availableHeight = viewportHeight - headerHeight - sidebarHeight - controlsHeight - (PADDING * 2);
-    
-    // Calculate based on width and height constraints
-    const sizeFromWidth = Math.floor(availableWidth / COLS);
-    const sizeFromHeight = Math.floor(availableHeight / ROWS);
-    
-    // Use the smaller one to ensure it fits
-    let newSize = Math.min(sizeFromWidth, sizeFromHeight);
-    
-    // Clamp to min/max
-    newSize = Math.max(MIN_BLOCK_SIZE, Math.min(MAX_BLOCK_SIZE, newSize));
-    
-    BLOCK_SIZE = newSize;
+    const availableW = Math.max(0, boardEl.clientWidth);
+    const availableH = Math.max(0, boardEl.clientHeight);
+    const sizeFromWidth = Math.floor(availableW / COLS);
+    const sizeFromHeight = Math.floor(availableH / ROWS);
+    BLOCK_SIZE = Math.max(
+        MIN_BLOCK_SIZE,
+        Math.min(MAX_BLOCK_SIZE, Math.min(sizeFromWidth, sizeFromHeight))
+    );
 }
 
-// Resize canvas based on current block size
+// Resize the main canvas and the next/hold preview canvases to match the
+// actual rendered sizes. The main canvas's CSS display size is also set so
+// the rendered size matches its internal resolution (1:1 pixel mapping).
 function resizeCanvas() {
     calculateBlockSize();
-    canvas.width = COLS * BLOCK_SIZE;
-    canvas.height = ROWS * BLOCK_SIZE;
-    // Redraw if game is running
+    const cssW = COLS * BLOCK_SIZE;
+    const cssH = ROWS * BLOCK_SIZE;
+    canvas.width = cssW;
+    canvas.height = cssH;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+
+    // Sync the next/hold preview internal size to the displayed size so the
+    // previews stay crisp on both mobile (small) and desktop (larger) layouts.
+    [nextCanvas, holdCanvas].forEach(c => {
+        const displayed = c.getBoundingClientRect().width;
+        const size = Math.max(16, Math.round(displayed));
+        if (c.width !== size) c.width = size;
+        if (c.height !== size) c.height = size;
+    });
+
     if (rafId) {
         draw();
     }
+    drawNext();
+    drawHold();
 }
 
 function createEmptyGrid() {
@@ -170,13 +176,16 @@ function drawPieceInCanvas(targetCtx, matrix, canvasSize) {
         });
     });
     if (maxX < 0) return;
+    // Derive the preview block size from the canvas size so the piece always
+    // fits, regardless of the preview's display dimensions.
+    const block = Math.max(8, Math.floor(canvasSize / 4));
     const pieceW = maxX - minX + 1;
     const pieceH = maxY - minY + 1;
-    const totalW = pieceW * PREVIEW_BLOCK;
-    const totalH = pieceH * PREVIEW_BLOCK;
-    const offsetX = Math.floor((canvasSize - totalW) / 2 / PREVIEW_BLOCK) - minX;
-    const offsetY = Math.floor((canvasSize - totalH) / 2 / PREVIEW_BLOCK) - minY;
-    drawMatrix(matrix, {x: offsetX, y: offsetY}, targetCtx, PREVIEW_BLOCK);
+    const totalW = pieceW * block;
+    const totalH = pieceH * block;
+    const offsetX = Math.floor((canvasSize - totalW) / 2 / block) - minX;
+    const offsetY = Math.floor((canvasSize - totalH) / 2 / block) - minY;
+    drawMatrix(matrix, {x: offsetX, y: offsetY}, targetCtx, block);
 }
 
 function drawNext() {
@@ -604,6 +613,16 @@ window.addEventListener('orientationchange', () => {
     // Small delay to let the browser update viewport dimensions
     setTimeout(resizeCanvas, 100);
 });
+
+// Re-size when the board's rendered box changes — covers the URL bar showing
+// or hiding, soft keyboards, and any other layout-driven viewport change that
+// does not fire a window 'resize' event.
+if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => resizeCanvas()).observe(boardEl);
+}
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resizeCanvas);
+}
 
 // Prevent context menu on long press (mobile)
 document.addEventListener('contextmenu', (e) => {
