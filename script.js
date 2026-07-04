@@ -251,11 +251,19 @@ function clearLines() {
         y++; // recheck same line index after shift
     }
     if (linesCleared > 0) {
+        const newLevel = Math.floor(lines / 10) + 1;
         lines += linesCleared;
-        score += linesCleared * 100; // simple scoring
-        level = Math.floor(lines / 10) + 1;
+        score += linesCleared * 100; // simple scoring; replaced by classic table in P1
+        if (newLevel !== level) {
+            level = newLevel;
+            dropInterval = computeDropInterval(level);
+        }
         updateScore();
     }
+}
+
+function computeDropInterval(forLevel) {
+    return Math.max(MIN_DROP_INTERVAL, 1000 * Math.pow(LEVEL_SPEED_EXP, forLevel - 1));
 }
 
 function updateScore() {
@@ -346,12 +354,14 @@ function update(time = 0) {
 function startGame() {
     if (rafId) return;
     grid = createEmptyGrid();
+    bag = [];
+    queue = [];
     current = resetPiece();
     score = 0;
     lines = 0;
     level = 1;
+    dropInterval = computeDropInterval(level);
     updateScore();
-    dropInterval = 1000;
     lastTime = performance.now();
     rafId = requestAnimationFrame(update);
 }
