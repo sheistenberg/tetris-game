@@ -58,6 +58,28 @@ h1 {
     margin: 5px 0;
 }
 
+#sidebar canvas {
+    display: block;
+    background: #000;
+    border: 1px solid #333;
+    margin: 5px auto;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+#next-piece-label,
+#hold-piece-label {
+    font-size: 14px;
+    color: #aaa;
+    margin-top: 10px !important;
+}
+
+#high-score-row {
+    font-size: 14px;
+    color: #aaa;
+    margin-top: 10px !important;
+}
+
 #sidebar button {
     margin-top: 10px;
     padding: 12px 24px;
@@ -123,6 +145,58 @@ h1 {
 .control-btn:active {
     background: #666;
     transform: scale(0.95);
+}
+
+/* Game-over overlay */
+#game-over {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.78);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+#game-over[hidden] {
+    display: none;
+}
+
+#game-over-panel {
+    background: #1a1a1a;
+    color: #fff;
+    border: 2px solid #555;
+    border-radius: 8px;
+    padding: 24px 32px;
+    text-align: center;
+    min-width: 220px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+#game-over-panel h2 {
+    margin: 0 0 12px 0;
+    font-size: 28px;
+}
+
+#game-over-panel > div {
+    margin: 6px 0;
+    font-size: 18px;
+}
+
+#game-over-panel button {
+    margin-top: 16px;
+    padding: 10px 24px;
+    font-size: 16px;
+    background: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+#game-over-panel button:hover {
+    background: #45a049;
 }
 
 /* Desktop styles */
