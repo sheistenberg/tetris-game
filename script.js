@@ -396,7 +396,10 @@ function playerHardDrop() {
         current.pos.y++;
         cellsDropped++;
     }
-    if (cellsDropped > 0) score += cellsDropped * 2;
+    if (cellsDropped > 0) {
+        score += cellsDropped * 2;
+        updateScore();
+    }
     placePiece();
     dropCounter = 0;
 }
