@@ -21,6 +21,11 @@ const holdCtx = holdCanvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
+const highScoreEl = document.getElementById('high-score');
+const finalScoreEl = document.getElementById('final-score');
+const finalHighEl = document.getElementById('final-high');
+const gameOverEl = document.getElementById('game-over');
+const restartBtn = document.getElementById('restart-btn');
 const startBtn = document.getElementById('start-btn');
 
 // Dynamic block size
@@ -88,6 +93,7 @@ let queue = [];
 let bag = [];
 let heldPiece = null;
 let canHold = true;
+let currentHighScore = 0;
 
 // Calculate block size based on viewport
 function calculateBlockSize() {
@@ -270,6 +276,28 @@ function updateScore() {
     scoreEl.textContent = score;
     linesEl.textContent = lines;
     levelEl.textContent = level;
+    if (score > currentHighScore) {
+        currentHighScore = score;
+        highScoreEl.textContent = score;
+    }
+}
+
+function readHighScore() {
+    try {
+        const raw = localStorage.getItem(HIGH_SCORE_KEY);
+        const parsed = raw === null ? 0 : parseInt(raw, 10);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+function writeHighScore(value) {
+    try {
+        localStorage.setItem(HIGH_SCORE_KEY, String(value));
+    } catch (e) {
+        // localStorage may be disabled (private mode, quota); ignore.
+    }
 }
 
 function refillBag() {
@@ -307,7 +335,15 @@ function nextFromQueue() {
 function placePiece() {
     merge(current.matrix, current.pos);
     clearLines();
-    current = resetPiece();
+    const next = nextFromQueue();
+    if (!isValidMove(next.matrix, next.pos)) {
+        current = next;
+        triggerGameOver();
+        return;
+    }
+    canHold = true;
+    current = next;
+    drawNext();
 }
 
 function resetPiece() {
@@ -356,21 +392,37 @@ function startGame() {
     grid = createEmptyGrid();
     bag = [];
     queue = [];
+    heldPiece = null;
+    canHold = true;
     current = resetPiece();
     score = 0;
     lines = 0;
     level = 1;
     dropInterval = computeDropInterval(level);
     updateScore();
+    drawHold();
     lastTime = performance.now();
     rafId = requestAnimationFrame(update);
 }
 
-function endGame() {
-    cancelAnimationFrame(rafId);
-    rafId = null;
-    alert(`Game Over! Score: ${score}`);
+function triggerGameOver() {
+    if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+    const high = readHighScore();
+    const newHigh = score > high;
+    if (newHigh) writeHighScore(score);
+    finalScoreEl.textContent = score;
+    finalHighEl.textContent = newHigh ? score : high;
+    highScoreEl.textContent = newHigh ? score : high;
+    gameOverEl.hidden = false;
     startBtn.disabled = false;
+}
+
+function restartGame() {
+    gameOverEl.hidden = true;
+    startGame();
 }
 
 // Input handling - Keyboard
@@ -426,6 +478,11 @@ startBtn.addEventListener('click', () => {
     startGame();
 });
 
+restartBtn.addEventListener('click', () => {
+    startBtn.disabled = true;
+    restartGame();
+});
+
 // Handle resize and orientation change
 window.addEventListener('resize', () => {
     resizeCanvas();
@@ -446,3 +503,7 @@ document.addEventListener('contextmenu', (e) => {
 
 // Initialize canvas size on load
 resizeCanvas();
+currentHighScore = readHighScore();
+highScoreEl.textContent = currentHighScore;
+drawNext();
+drawHold();
