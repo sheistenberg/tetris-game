@@ -97,14 +97,12 @@ let currentHighScore = 0;
 let paused = false;
 
 // Measure the rendered #board element and pick a block size that fits both
-// axes. The board container is laid out by CSS to be the largest box that
-// respects the 1:2 Tetris aspect ratio inside whatever space the grid gives
-// it, so measuring it directly avoids the old hard-coded header / sidebar /
-// controls subtractions.
+// axes. Uses clientWidth/clientHeight (the content box, which excludes the
+// 1px border) so the block math reflects the space actually available to
+// the canvas inside the board.
 function calculateBlockSize() {
-    const rect = boardEl.getBoundingClientRect();
-    const availableW = Math.max(0, rect.width);
-    const availableH = Math.max(0, rect.height);
+    const availableW = Math.max(0, boardEl.clientWidth);
+    const availableH = Math.max(0, boardEl.clientHeight);
     const sizeFromWidth = Math.floor(availableW / COLS);
     const sizeFromHeight = Math.floor(availableH / ROWS);
     BLOCK_SIZE = Math.max(
@@ -114,12 +112,16 @@ function calculateBlockSize() {
 }
 
 // Resize the main canvas and the next/hold preview canvases to match the
-// actual rendered sizes. Preview canvases get a per-canvas block size so
-// the piece always fits regardless of the chosen preview size.
+// actual rendered sizes. The main canvas's CSS display size is also set so
+// the rendered size matches its internal resolution (1:1 pixel mapping).
 function resizeCanvas() {
     calculateBlockSize();
-    canvas.width = COLS * BLOCK_SIZE;
-    canvas.height = ROWS * BLOCK_SIZE;
+    const cssW = COLS * BLOCK_SIZE;
+    const cssH = ROWS * BLOCK_SIZE;
+    canvas.width = cssW;
+    canvas.height = cssH;
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
 
     // Sync the next/hold preview internal size to the displayed size so the
     // previews stay crisp on both mobile (small) and desktop (larger) layouts.
