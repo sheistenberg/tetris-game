@@ -4,40 +4,99 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #222;
+    color: #eee;
+}
+
 body {
     font-family: Arial, sans-serif;
     text-align: center;
-    background: #222;
-    color: #eee;
-    margin: 0;
-    padding: 10px;
-    min-height: 100vh;
-    overflow-x: hidden;
-    /* Prevent scroll interference on mobile */
+    /* Lock the page to the viewport. The page must never scroll on mobile. */
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport height — shrinks/grows with mobile browser chrome */
+    overflow: hidden;
     overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
 }
 
-#game-wrapper {
+#app {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+        "header"
+        "game"
+        "controls";
+    gap: 6px;
+    padding: 6px;
+    /* Pull content into the safe area on notched phones. */
+    padding-top: max(6px, env(safe-area-inset-top));
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    padding-left: max(6px, env(safe-area-inset-left));
+    padding-right: max(6px, env(safe-area-inset-right));
+}
+
+.app-header {
+    grid-area: header;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    max-width: 100%;
-    margin: 0 auto;
+    justify-content: center;
+    min-height: 0;
 }
 
 h1 {
-    margin: 0 0 10px 0;
-    font-size: 24px;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 1px;
 }
 
-#game-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+.game-area {
+    grid-area: game;
+    min-height: 0;       /* allow children to shrink inside a 1fr row */
+    min-width: 0;
+    display: grid;
+    /* Board and sidebar are sized to their content and sit adjacent, so
+       there is no gap of .game-area background between them. justify-content
+       centers the content in the .game-area when the row is wider than the
+       content (e.g. desktop). */
+    grid-template-columns: auto auto;
+    justify-content: center;
+    gap: 8px;
     background: #111;
-    padding: 8px;
     border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    padding: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    /* The board area must not initiate scroll/refresh gestures. */
+    touch-action: none;
+    overscroll-behavior: contain;
+}
+
+#board {
+    /* The board is a flex centering box that fills the 1fr grid cell. The
+       cell height is bounded by the surrounding header + controls, so the
+       board must be allowed to shrink below the canvas's intrinsic size —
+       otherwise the canvas's 240x400 attribute size (boosted to 1:2 by the
+       board's old aspect-ratio) overflows the cell and lands on top of the
+       on-screen controls. JS sets the canvas dimensions inside this box
+       AND sizes the board to (canvas + 2 borders) so the board's #000
+       background never shows past the canvas edges. Without that JS sizing
+       the board fills the grid cell and the canvas is centered inside it,
+       leaving a strip of #000 on each side of the canvas that looks like
+       extra, unplayable columns. max-width: 100% keeps the board inside
+       its grid cell on viewports too narrow to hold the canvas. */
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    border: 1px solid #333;
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 #game-canvas {
@@ -45,45 +104,50 @@ h1 {
     background: #111;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+    /* Sized in JS via canvas.width/height and canvas.style.width/height so
+       the internal resolution matches the rendered size. */
 }
 
 #sidebar {
-    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
     color: #fff;
-    font-size: 16px;
-    padding: 10px 0;
+    font-size: 11px;
+    min-width: 64px;
+    max-width: 88px;
+    overflow: hidden;
 }
 
-#sidebar > div {
-    margin: 5px 0;
+.stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-variant-numeric: tabular-nums;
 }
 
-#sidebar canvas {
-    display: block;
-    background: #000;
-    border: 1px solid #333;
-    margin: 5px auto;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-}
-
-#next-piece-label,
-#hold-piece-label {
-    font-size: 14px;
+.stat-label {
     color: #aaa;
-    margin-top: 10px !important;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-#high-score-row {
-    font-size: 14px;
-    color: #aaa;
-    margin-top: 10px !important;
+.stat--muted #high-score,
+.stat--muted #score {
+    color: #f0c040;
 }
 
 #sidebar button {
-    margin-top: 10px;
-    padding: 12px 24px;
-    font-size: 16px;
+    margin: 0;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     background: #4CAF50;
     border: none;
@@ -125,31 +189,64 @@ h1 {
     background: #2e2e2e;
 }
 
-/* Mobile touch controls */
-#mobile-controls {
+.preview {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
-    margin-top: 15px;
+    gap: 2px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.preview-label {
+    color: #aaa;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#sidebar canvas {
+    display: block;
+    background: #000;
+    border: 1px solid #333;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    /* JS sets width/height attributes; CSS lets the box shrink to fit. */
     width: 100%;
-    max-width: 300px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    max-width: 72px;
+}
+
+/* Mobile touch controls */
+.mobile-controls {
+    grid-area: controls;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    touch-action: manipulation;
 }
 
 .control-row {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.control-row--hold {
+    grid-template-columns: 1fr;
 }
 
 .control-btn {
-    width: 70px;
-    height: 60px;
-    font-size: 24px;
+    min-height: 48px;     /* Apple HIG / Material minimum touch target */
+    font-size: 22px;
+    font-weight: 600;
     border: none;
     border-radius: 8px;
-    background: #444;
+    background: #3a3a3a;
     color: #fff;
     cursor: pointer;
     touch-action: manipulation;
@@ -158,11 +255,145 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
+    transition: background 80ms linear, transform 80ms linear;
+}
+
+.control-btn--accent {
+    background: #2e6da4;
+}
+
+.control-btn--drop {
+    background: #b04a2a;
+}
+
+.control-btn--wide {
+    min-height: 44px;
+    font-size: 16px;
+    letter-spacing: 1px;
 }
 
 .control-btn:active {
-    background: #666;
-    transform: scale(0.95);
+    transform: scale(0.96);
+    filter: brightness(1.2);
+}
+
+/* Landscape phone — single row of controls beside the game */
+@media (orientation: landscape) and (max-height: 500px) {
+    #app {
+        grid-template-rows: auto 1fr;
+        grid-template-areas:
+            "header"
+            "game";
+        padding: 4px;
+        gap: 4px;
+    }
+
+    .app-header h1 {
+        font-size: 14px;
+    }
+
+    .game-area {
+        grid-template-columns: auto auto;
+        grid-template-rows: 1fr auto;
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .mobile-controls {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+    }
+
+    .control-row {
+        grid-template-columns: none;
+        grid-auto-flow: column;
+        gap: 4px;
+    }
+
+    .control-btn {
+        min-height: 40px;
+        min-width: 44px;
+        font-size: 18px;
+        padding: 0 6px;
+    }
+
+    .control-row--hold {
+        flex: 0 0 auto;
+    }
+
+    .control-btn--wide {
+        min-width: 64px;
+    }
+}
+
+/* Desktop / tablet — restore a comfortable layout with the sidebar to the
+   right and the on-screen controls hidden. Triggered at >= 720px wide and
+   >= 520px tall so small tablets stay in the phone layout. */
+@media (min-width: 720px) and (min-height: 520px) {
+    #app {
+        max-width: 720px;
+        margin: 0 auto;
+        height: 100%;
+        padding: 16px;
+        gap: 12px;
+    }
+
+    h1 {
+        font-size: 32px;
+    }
+
+    .game-area {
+        grid-template-columns: auto auto;
+        gap: 20px;
+        padding: 16px;
+    }
+
+    #board {
+        /* Give the board a defined size on desktop; JS may still resize
+           down further. */
+        max-width: 320px;
+    }
+
+    #sidebar {
+        font-size: 16px;
+        min-width: 140px;
+        max-width: none;
+        gap: 10px;
+    }
+
+    .stat {
+        padding: 8px 10px;
+    }
+
+    .stat-label {
+        font-size: 12px;
+    }
+
+    #sidebar button {
+        padding: 12px 24px;
+        font-size: 16px;
+    }
+
+    .preview {
+        padding: 6px;
+    }
+
+    .preview-label {
+        font-size: 12px;
+    }
+
+    #sidebar canvas {
+        max-width: none;
+    }
+
+    .mobile-controls {
+        display: none;
+    }
 }
 
 /* Game-over overlay */
@@ -194,17 +425,8 @@ h1 {
     display: none;
 }
 
-#paused-panel {
-    background: #1a1a1a;
-    color: #fff;
-    border: 2px solid #555;
-    border-radius: 8px;
-    padding: 18px 36px;
-    font-size: 24px;
-    letter-spacing: 2px;
-}
-
-#game-over-panel {
+/* Shared modal-panel styles for the pause and game-over overlays. */
+.modal-panel {
     background: #1a1a1a;
     color: #fff;
     border: 2px solid #555;
@@ -215,17 +437,12 @@ h1 {
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
 }
 
-#game-over-panel h2 {
+.modal-panel h2 {
     margin: 0 0 12px 0;
     font-size: 28px;
 }
 
-#game-over-panel > div {
-    margin: 6px 0;
-    font-size: 18px;
-}
-
-#game-over-panel button {
+.modal-panel button {
     margin-top: 16px;
     padding: 10px 24px;
     font-size: 16px;
@@ -237,8 +454,19 @@ h1 {
     touch-action: manipulation;
 }
 
-#game-over-panel button:hover {
+.modal-panel button:hover {
     background: #45a049;
+}
+
+/* Pause panel: match the original letter-spacing on the heading. */
+#paused-panel h2 {
+    letter-spacing: 2px;
+}
+
+/* Game-over panel: extra score / high-score rows below the heading. */
+#game-over-panel > div {
+    margin: 6px 0;
+    font-size: 18px;
 }
 
 /* Controls modal — same dim-overlay pattern as #game-over / #paused, with
@@ -315,37 +543,4 @@ h1 {
 
 #controls-panel button:hover {
     background: #45a049;
-}
-
-/* Desktop styles */
-@media (min-width: 600px) {
-    body {
-        padding: 20px;
-    }
-
-    h1 {
-        font-size: 32px;
-        margin-bottom: 20px;
-    }
-
-    #game-container {
-        flex-direction: row;
-        padding: 15px;
-        gap: 20px;
-    }
-
-    #sidebar {
-        width: auto;
-        min-width: 120px;
-        text-align: left;
-        padding: 0;
-    }
-
-    #sidebar button {
-        width: 100%;
-    }
-
-    #mobile-controls {
-        display: none;
-    }
 }

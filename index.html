@@ -2,44 +2,57 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Tetris</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Tetris</h1>
-    <div id="game-container">
-        <canvas id="game-canvas" width="240" height="400"></canvas>
-        <div id="sidebar">
-            <div>Score: <span id="score">0</span></div>
-            <div>Lines: <span id="lines">0</span></div>
-            <div>Level: <span id="level">1</span></div>
-            <button id="start-btn">Start</button>
-            <button id="controls-btn" type="button" class="sidebar-secondary-btn">Controls</button>
-            <div id="next-piece-label">Next:</div>
-            <canvas id="next-canvas" width="96" height="96"></canvas>
-            <div id="hold-piece-label">Hold:</div>
-            <canvas id="hold-canvas" width="96" height="96"></canvas>
-            <div id="high-score-row">High: <span id="high-score">0</span></div>
+    <div id="app">
+        <header class="app-header">
+            <h1>Tetris</h1>
+        </header>
+
+        <main class="game-area">
+            <div id="board">
+                <canvas id="game-canvas" width="240" height="400"></canvas>
+            </div>
+            <aside id="sidebar">
+                <button id="start-btn">Start</button>
+                <button id="controls-btn" type="button" class="sidebar-secondary-btn">Controls</button>
+                <div class="stat"><span class="stat-label">Score</span><span id="score">0</span></div>
+                <div class="stat"><span class="stat-label">Lines</span><span id="lines">0</span></div>
+                <div class="stat"><span class="stat-label">Level</span><span id="level">1</span></div>
+                <div class="stat stat--muted"><span class="stat-label">High</span><span id="high-score">0</span></div>
+                <div class="preview">
+                    <div class="preview-label">Next</div>
+                    <canvas id="next-canvas" width="96" height="96"></canvas>
+                </div>
+                <div class="preview">
+                    <div class="preview-label">Hold</div>
+                    <canvas id="hold-canvas" width="96" height="96"></canvas>
+                </div>
+            </aside>
+        </main>
+
+        <div id="mobile-controls" class="mobile-controls">
+            <div class="control-row control-row--primary">
+                <button class="control-btn" data-action="left" aria-label="Move left">&#9664;</button>
+                <button class="control-btn control-btn--accent" data-action="rotate" aria-label="Rotate">&#8635;</button>
+                <button class="control-btn" data-action="right" aria-label="Move right">&#9654;</button>
+            </div>
+            <div class="control-row control-row--secondary">
+                <button class="control-btn" data-action="down" aria-label="Soft drop">&#9660;</button>
+                <button class="control-btn control-btn--drop" data-action="hard-drop" aria-label="Hard drop">&#10515;</button>
+                <button class="control-btn" data-action="pause" aria-label="Pause">II</button>
+            </div>
+            <div class="control-row control-row--hold">
+                <button class="control-btn control-btn--wide" data-action="hold" aria-label="Hold">Hold</button>
+            </div>
         </div>
     </div>
-    <div id="mobile-controls">
-        <div class="control-row">
-            <button class="control-btn" data-action="left" aria-label="Move left">&#9664;</button>
-            <button class="control-btn" data-action="rotate" aria-label="Rotate">&#8635;</button>
-            <button class="control-btn" data-action="right" aria-label="Move right">&#9654;</button>
-        </div>
-        <div class="control-row">
-            <button class="control-btn" data-action="down" aria-label="Soft drop">&#9660;</button>
-            <button class="control-btn" data-action="hard-drop" aria-label="Hard drop">&#10515;</button>
-        </div>
-        <div class="control-row">
-            <button class="control-btn" data-action="hold" aria-label="Hold">H</button>
-            <button class="control-btn" data-action="pause" aria-label="Pause">II</button>
-        </div>
-    </div>
+
     <div id="game-over" hidden>
-        <div id="game-over-panel">
+        <div id="game-over-panel" class="modal-panel">
             <h2>Game Over</h2>
             <div>Score: <span id="final-score">0</span></div>
             <div>High: <span id="final-high">0</span></div>
@@ -47,7 +60,10 @@
         </div>
     </div>
     <div id="paused" hidden>
-        <div id="paused-panel">Paused</div>
+        <div id="paused-panel" class="modal-panel">
+            <h2>Paused</h2>
+            <button id="resume-btn" type="button">Resume</button>
+        </div>
     </div>
     <div id="controls" hidden>
         <div id="controls-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="controls-title">
