@@ -15,6 +15,7 @@
             <div>Lines: <span id="lines">0</span></div>
             <div>Level: <span id="level">1</span></div>
             <button id="start-btn">Start</button>
+            <button id="controls-btn" type="button" class="sidebar-secondary-btn">Controls</button>
             <div id="next-piece-label">Next:</div>
             <canvas id="next-canvas" width="96" height="96"></canvas>
             <div id="hold-piece-label">Hold:</div>
@@ -47,6 +48,26 @@
     </div>
     <div id="paused" hidden>
         <div id="paused-panel">Paused</div>
+    </div>
+    <div id="controls" hidden>
+        <div id="controls-panel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="controls-title">
+            <h2 id="controls-title">Controls</h2>
+            <table class="controls-table">
+                <thead>
+                    <tr><th scope="col">Action</th><th scope="col">Key</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Move left</td><td class="controls-key">&larr;</td></tr>
+                    <tr><td>Move right</td><td class="controls-key">&rarr;</td></tr>
+                    <tr><td>Soft drop</td><td class="controls-key">&darr;</td></tr>
+                    <tr><td>Rotate</td><td class="controls-key">&uarr;</td></tr>
+                    <tr><td>Hard drop</td><td class="controls-key">Space</td></tr>
+                    <tr><td>Hold</td><td class="controls-key">C</td></tr>
+                    <tr><td>Pause / Resume</td><td class="controls-key">P</td></tr>
+                </tbody>
+            </table>
+            <button id="controls-close-btn" type="button">Close</button>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
