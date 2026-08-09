@@ -1,0 +1,1 @@
+// scratch file for E2E QA Agent nexra-native migration verification (pass 2) — 2026-08-09T17:12:43Z
