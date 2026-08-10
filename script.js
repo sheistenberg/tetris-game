@@ -315,8 +315,17 @@ function clearLines() {
     }
 }
 
+const MAX_LEVEL = 20;
+
+function clampLevel(rawLevel) {
+    if (rawLevel < 1) return 1;
+    if (rawLevel > MAX_LEVEL) return MAX_LEVEL - 1;
+    return rawLevel;
+}
+
 function computeDropInterval(forLevel) {
-    return Math.max(MIN_DROP_INTERVAL, 1000 * Math.pow(LEVEL_SPEED_EXP, forLevel - 1));
+    const level = clampLevel(forLevel);
+    return Math.max(MIN_DROP_INTERVAL, 1000 * Math.pow(LEVEL_SPEED_EXP, level - 1));
 }
 
 function updateScore() {
