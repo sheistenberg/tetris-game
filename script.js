@@ -289,6 +289,12 @@ function isValidMove(matrix, cellOffset) {
     return true;
 }
 
+function comboBonus(linesCleared) {
+    if (linesCleared >= 4) return 400;
+    if (linesCleared > 2) return 100;
+    return 0;
+}
+
 function clearLines() {
     let linesCleared = 0;
     outer: for (let y = ROWS - 1; y >= 0; --y) {
@@ -306,7 +312,7 @@ function clearLines() {
     if (linesCleared > 0) {
         lines += linesCleared;
         const newLevel = Math.floor(lines / 10) + 1;
-        score += SCORE_TABLE[linesCleared] * level;
+        score += SCORE_TABLE[linesCleared] * level + comboBonus(linesCleared);
         if (newLevel !== level) {
             level = newLevel;
             dropInterval = computeDropInterval(level);
