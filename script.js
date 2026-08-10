@@ -320,13 +320,20 @@ function computeDropInterval(forLevel) {
 }
 
 function updateScore() {
-    scoreEl.textContent = score;
+    scoreEl.textContent = formatScoreForDisplay(score);
     linesEl.textContent = lines;
     levelEl.textContent = level;
     if (score > currentHighScore) {
         currentHighScore = score;
         highScoreEl.textContent = score;
     }
+}
+
+const MAX_DISPLAYABLE_SCORE = 999999;
+
+function formatScoreForDisplay(value) {
+    if (value > MAX_DISPLAYABLE_SCORE) return MAX_DISPLAYABLE_SCORE;
+    return value;
 }
 
 function readHighScore() {
