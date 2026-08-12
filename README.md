@@ -8,4 +8,4 @@ Open `index.html` in a browser and click Start.
 ## Development
 - No build step required.
 - Edit `script.js` for game logic.
-- Edit `style.css` for styling.
+- Edit `style.css` for styling.<!-- servyn workspace commit-flow validation 2026-08-12T00:40:08Z -->
