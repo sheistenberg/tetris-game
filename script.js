@@ -1,4 +1,5 @@
-// Constants
+// Game loop: runs via requestAnimationFrame, updates piece position, handles drops, collisions, line clears, and renders the board each frame
+// It manages the main animation cycle for the Tetris game
 const COLS = 10;
 const ROWS = 20;
 const MIN_BLOCK_SIZE = 16;
