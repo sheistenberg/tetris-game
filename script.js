@@ -488,7 +488,7 @@ function awardScore(delta, durationMs) {
     const current = parseInt(scoreEl.textContent, 10) || 0;
     scoreAnim = {
         from: current,
-        to: current + delta,
+        to: score,
         startTime: gameTime,
         duration: durationMs,
     };
@@ -726,10 +726,13 @@ function togglePause() {
     paused = !paused;
     pausedEl.hidden = !paused;
     if (paused) {
+        document.body.classList.add('paused');
         // Land focus on the Resume button so keyboard / screen-reader users
         // can immediately press Enter. Deferred so the panel is visible when
         // focus moves (otherwise the browser may scroll or skip the focus).
         setTimeout(() => resumeBtn.focus(), 0);
+    } else {
+        document.body.classList.remove('paused');
     }
 }
 
@@ -759,6 +762,11 @@ function startGame() {
 }
 
 function triggerGameOver() {
+    // Reconcile sidebar score if a tick is in flight
+    scoreEl.textContent = score;
+    scoreAnim = null;
+    clearAnim = null;
+
     if (rafId) {
         cancelAnimationFrame(rafId);
         rafId = null;

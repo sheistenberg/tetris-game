@@ -218,6 +218,18 @@ h1 {
     100% { transform: scale(1); color: #fff; }
 }
 
+/* Pause state — freeze CSS-driven animations (score-pulse, lines-pulse,
+   level-pulse, score-float) so a paused game doesn't show half-finished
+   floaters/pulses. The JS-driven half (scoreAnim, clearAnim) freezes via
+   gameTime not advancing in update(). */
+.paused .stat-value,
+.paused #score,
+.paused #lines,
+.paused #level,
+.paused #score-floater {
+    animation-play-state: paused;
+}
+
 #sidebar button {
     margin: 0;
     padding: 8px 10px;
