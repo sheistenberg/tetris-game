@@ -561,6 +561,7 @@ document.addEventListener('keydown', event => {
     
     if (!rafId) return;
     if (event.key === 'p' || event.key === 'P') {
+        if (!controlsEl.hidden) return;
         togglePause();
         return;
     }

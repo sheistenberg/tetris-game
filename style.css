@@ -220,6 +220,13 @@ h1 {
     max-width: 72px;
 }
 
+/* Hide Controls button on narrow mobile viewports */
+@media (max-width: 600px) {
+    #controls-btn {
+        display: none;
+    }
+}
+
 /* Mobile touch controls */
 .mobile-controls {
     grid-area: controls;
