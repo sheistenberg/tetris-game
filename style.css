@@ -171,6 +171,24 @@ h1 {
     cursor: not-allowed;
 }
 
+/* Secondary sidebar button (e.g. Controls) — same shape as the primary
+   Start button but a neutral, lower-emphasis colour so the two do not
+   compete for attention. */
+.sidebar-secondary-btn {
+    background: #3a3a3a;
+    font-weight: 400;
+    font-size: 14px;
+    padding: 10px 20px;
+}
+
+.sidebar-secondary-btn:hover {
+    background: #4a4a4a;
+}
+
+.sidebar-secondary-btn:active {
+    background: #2e2e2e;
+}
+
 .preview {
     display: flex;
     flex-direction: column;
@@ -200,6 +218,13 @@ h1 {
     height: auto;
     aspect-ratio: 1 / 1;
     max-width: 72px;
+}
+
+/* Hide Controls button on narrow mobile viewports */
+@media (max-width: 600px) {
+    #controls-btn {
+        display: none;
+    }
 }
 
 /* Mobile touch controls */
@@ -449,4 +474,80 @@ h1 {
 #game-over-panel > div {
     margin: 6px 0;
     font-size: 18px;
+}
+
+/* Controls modal — same dim-overlay pattern as #game-over / #paused, with
+   a slightly higher z-index than #paused (95) so opening the controls
+   while the game is paused shows the controls on top of the pause panel. */
+#controls {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 95;
+}
+
+#controls[hidden] {
+    display: none;
+}
+
+#controls-panel {
+    text-align: center;
+    min-width: 260px;
+}
+
+#controls-panel h2 {
+    margin: 0 0 16px 0;
+    font-size: 24px;
+    letter-spacing: 2px;
+}
+
+.controls-table {
+    margin: 0 auto 8px auto;
+    border-collapse: collapse;
+    font-size: 16px;
+}
+
+.controls-table th,
+.controls-table td {
+    padding: 6px 18px;
+    text-align: left;
+    border-bottom: 1px solid #333;
+}
+
+.controls-table th {
+    color: #aaa;
+    font-size: 12px;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #555;
+}
+
+.controls-table tr:last-child td {
+    border-bottom: none;
+}
+
+.controls-key {
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #f0c040;
+}
+
+#controls-panel button {
+    margin-top: 16px;
+    padding: 10px 24px;
+    font-size: 16px;
+    background: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+#controls-panel button:hover {
+    background: #45a049;
 }

@@ -29,6 +29,9 @@ const pausedEl = document.getElementById('paused');
 const restartBtn = document.getElementById('restart-btn');
 const startBtn = document.getElementById('start-btn');
 const resumeBtn = document.getElementById('resume-btn');
+const controlsEl = document.getElementById('controls');
+const controlsBtn = document.getElementById('controls-btn');
+const controlsCloseBtn = document.getElementById('controls-close-btn');
 
 // Dynamic block size
 let BLOCK_SIZE = 24;
@@ -479,10 +482,18 @@ function update(time = 0) {
     }
     dropCounter += delta;
     if (dropCounter > dropInterval) {
+        // playerDrop() can chain into placePiece() -> triggerGameOver(), which
+        // cancels the current rAF and sets rafId = null. In that case the
+        // game is over and we must NOT re-schedule a new frame, otherwise the
+        // animation would keep running, the board would keep filling with
+        // stuck pieces, and restartGame() -> startGame() would early-return
+        // on its `if (rafId) return` guard, leaving the old grid in place.
         playerDrop();
     }
     draw();
-    rafId = requestAnimationFrame(update);
+    if (rafId !== null) {
+        rafId = requestAnimationFrame(update);
+    }
 }
 
 function togglePause() {
@@ -511,6 +522,9 @@ function startGame() {
     lines = 0;
     level = 1;
     dropInterval = computeDropInterval(level);
+    // Reset the soft-drop accumulator so a stale value from the previous run
+    // cannot force an immediate playerDrop() on the first frame of the new one.
+    dropCounter = 0;
     updateScore();
     drawHold();
     lastTime = performance.now();
@@ -548,6 +562,7 @@ document.addEventListener('keydown', event => {
     
     if (!rafId) return;
     if (event.key === 'p' || event.key === 'P') {
+        if (!controlsEl.hidden) return;
         togglePause();
         return;
     }
@@ -621,6 +636,48 @@ restartBtn.addEventListener('click', () => {
 
 resumeBtn.addEventListener('click', () => {
     togglePause();
+});
+
+// Controls modal — a desktop reference for the keyboard shortcuts. Opening
+// the modal pauses a running game so a piece cannot auto-drop while the
+// player is reading; closing it resumes the game only if the modal was
+// the one that paused it. If the game was already paused (or not running)
+// when the modal opened, closing the modal leaves the state alone.
+let wasRunningBeforeControls = false;
+
+function openControls() {
+    wasRunningBeforeControls = rafId !== null && !paused;
+    if (wasRunningBeforeControls) {
+        togglePause();
+    }
+    controlsEl.hidden = false;
+    // Defer focus so the browser paints the modal before focus moves
+    // (otherwise some browsers skip the focus or scroll unexpectedly).
+    setTimeout(() => controlsCloseBtn.focus(), 0);
+}
+
+function closeControls() {
+    if (controlsEl.hidden) return;
+    controlsEl.hidden = true;
+    if (wasRunningBeforeControls && paused) {
+        togglePause();
+    }
+    wasRunningBeforeControls = false;
+}
+
+controlsBtn.addEventListener('click', openControls);
+controlsCloseBtn.addEventListener('click', closeControls);
+// Backdrop click closes the modal; clicks on the panel itself do not.
+controlsEl.addEventListener('click', (e) => {
+    if (e.target === controlsEl) closeControls();
+});
+// Escape closes the modal from anywhere, but only when it is open so the
+// key still works for the P-key pause binding when the modal is hidden.
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !controlsEl.hidden) {
+        e.preventDefault();
+        closeControls();
+    }
 });
 
 // Handle resize and orientation change
