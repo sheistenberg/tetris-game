@@ -10,6 +10,12 @@ const HIGH_SCORE_KEY = 'tetris:highScore';
 const SCORE_TABLE = [0, 40, 100, 300, 1200];
 const LEVEL_SPEED_EXP = 0.85;
 const MIN_DROP_INTERVAL = 80; // ms
+// Line-clear animation timings (ms). Total clear (sweep + fall) ~ 310 ms.
+const SWEEP_MS = 170;
+const FALL_MS = 140;
+// Score tick-up animation durations (ms).
+const SCORE_TICK_HARDDROP_MS = 220;
+const SCORE_TICK_CLEAR_MS = 380;
 
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
@@ -29,6 +35,7 @@ const pausedEl = document.getElementById('paused');
 const restartBtn = document.getElementById('restart-btn');
 const startBtn = document.getElementById('start-btn');
 const resumeBtn = document.getElementById('resume-btn');
+const scoreFloaterEl = document.getElementById('score-floater');
 
 // Dynamic block size
 let BLOCK_SIZE = 24;
@@ -99,6 +106,14 @@ let heldPiece = null;
 let canHold = true;
 let currentHighScore = 0;
 let paused = false;
+// Game-time accumulator (ms) that only advances while the game is un-paused.
+// Used as the baseline for clearAnim / scoreAnim so in-flight animations
+// freeze on pause and resume from the same elapsed time on un-pause.
+let gameTime = 0;
+// Active line-clear animation (sweep + fall). Non-null while playing.
+let clearAnim = null;
+// Active score-tick animation (textContent interpolation). Non-null while playing.
+let scoreAnim = null;
 
 // Measure the rendered #board element and pick a block size that fits both
 // axes. Uses clientWidth/clientHeight (the content box, which excludes the
@@ -244,13 +259,93 @@ function drawGhost(matrix, pos) {
 function draw() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawMatrix(grid, {x: 0, y: 0});
-    if (current) {
+    if (clearAnim && clearAnim.phase === 'fall') {
+        drawGridWithFall();
+    } else {
+        drawGridWithSweepSkip();
+    }
+    if (clearAnim && clearAnim.phase === 'sweep') {
+        drawRowSweep();
+    }
+    // The current piece is hidden during a clear animation so the playfield
+    // shows only the surviving grid mid-animation. The next piece is spawned
+    // when finishClearAnim() runs.
+    if (current && !clearAnim) {
         const ghost = getGhostPos();
         if (ghost.y !== current.pos.y) {
             drawGhost(current.matrix, ghost);
         }
         drawMatrix(current.matrix, current.pos);
+    }
+}
+
+function drawGridWithSweepSkip() {
+    const skip = clearAnim ? new Set(clearAnim.rows) : null;
+    for (let y = 0; y < ROWS; y++) {
+        if (skip && skip.has(y)) continue;
+        for (let x = 0; x < COLS; x++) {
+            const v = grid[y][x];
+            if (v === 0) continue;
+            ctx.fillStyle = COLORS[v];
+            ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+        }
+    }
+}
+
+function drawRowSweep() {
+    // Center-out white wipe: each cell's local progress starts at
+    // (distFromCenter / maxDist) * 0.4, so the center column starts at t=0
+    // and the edge columns start at t=0.4. Each cell's wipe is 60% of the
+    // sweep's total time. While wiping, the cell is a white bar that shrinks
+    // horizontally toward its center and fades in the final 30% of its
+    // local time. Cells with localT >= 1 are already gone.
+    const t = clearAnim.sweepProgress;
+    const maxDist = (COLS - 1) / 2;
+    for (const rowIdx of clearAnim.rows) {
+        for (let x = 0; x < COLS; x++) {
+            const dist = Math.abs(x - (COLS - 1) / 2);
+            const cellStart = (dist / maxDist) * 0.4;
+            const localT = (t - cellStart) / 0.6;
+            if (localT <= 0 || localT >= 1) continue;
+            let widthFrac, alpha;
+            if (localT < 0.3) {
+                // Solid white bar with alpha rising
+                widthFrac = 1;
+                alpha = localT / 0.3;
+            } else {
+                // Shrink horizontally while held at full alpha
+                widthFrac = 1 - (localT - 0.3) / 0.7;
+                alpha = 1;
+            }
+            const w = BLOCK_SIZE * widthFrac;
+            const offsetX = (BLOCK_SIZE - w) / 2;
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = alpha;
+            ctx.fillRect(x * BLOCK_SIZE + offsetX, rowIdx * BLOCK_SIZE, w, BLOCK_SIZE - 1);
+            ctx.globalAlpha = 1;
+        }
+    }
+}
+
+function drawGridWithFall() {
+    // Render the grid where each row r is drawn at a Y offset that animates
+    // from its pre-clear position down to its post-clear position. Rows
+    // marked for clearing are not drawn (they were visually wiped by the
+    // sweep phase and are about to be spliced out of `grid`).
+    const cleared = new Set(clearAnim.rows);
+    const fallProgress = clearAnim.fallProgress;
+    for (let y = 0; y < ROWS; y++) {
+        if (cleared.has(y)) continue;
+        const fallBy = clearAnim.fallByRow[y];
+        // Pre-clear row index = y + fallBy. Post-clear = y. Lerp.
+        const visualRow = y + fallBy * (1 - fallProgress);
+        const yPx = visualRow * BLOCK_SIZE;
+        for (let x = 0; x < COLS; x++) {
+            const v = grid[y][x];
+            if (v === 0) continue;
+            ctx.fillStyle = COLORS[v];
+            ctx.fillRect(x * BLOCK_SIZE, yPx, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+        }
     }
 }
 
@@ -290,30 +385,144 @@ function isValidMove(matrix, cellOffset) {
     return true;
 }
 
-function clearLines() {
-    let linesCleared = 0;
-    outer: for (let y = ROWS - 1; y >= 0; --y) {
+function findFullRows() {
+    // Identify full rows in grid without mutating it. Returned bottom-to-top
+    // so a Tetris (4 full rows) gives a stable ordering for animation state.
+    const rows = [];
+    for (let y = ROWS - 1; y >= 0; --y) {
+        let full = true;
         for (let x = 0; x < COLS; ++x) {
-            if (grid[y][x] === 0) {
-                continue outer;
-            }
+            if (grid[y][x] === 0) { full = false; break; }
         }
-        // row is full
-        const row = grid.splice(y, 1)[0];
+        if (full) rows.push(y);
+    }
+    return rows;
+}
+
+function startClearAnim(rows) {
+    // Precompute the number of cleared rows below each grid row so the fall
+    // phase can lerp each row from its pre-clear position to its post-clear
+    // position. Cleared rows themselves stay at 0 (they are not drawn).
+    const fallByRow = new Array(ROWS).fill(0);
+    for (let r = 0; r < ROWS; r++) {
+        let count = 0;
+        for (const cr of rows) if (cr < r) count++;
+        fallByRow[r] = count;
+    }
+    clearAnim = {
+        phase: 'sweep',
+        rows,
+        fallByRow,
+        sweepStart: gameTime,
+        sweepDuration: SWEEP_MS,
+        sweepProgress: 0,
+        fallStart: 0,
+        fallDuration: FALL_MS,
+        fallProgress: 0,
+    };
+}
+
+function tickClearAnim(time) {
+    if (!clearAnim) return;
+    if (clearAnim.phase === 'sweep') {
+        const t = (time - clearAnim.sweepStart) / clearAnim.sweepDuration;
+        clearAnim.sweepProgress = Math.min(1, t);
+        if (t >= 1) {
+            clearAnim.phase = 'fall';
+            clearAnim.fallStart = time;
+            clearAnim.fallProgress = 0;
+        }
+    } else if (clearAnim.phase === 'fall') {
+        const t = (time - clearAnim.fallStart) / clearAnim.fallDuration;
+        // ease-in (gravity): t^2
+        clearAnim.fallProgress = Math.min(1, t * t);
+        if (t >= 1) {
+            finishClearAnim();
+        }
+    }
+}
+
+function finishClearAnim() {
+    // Commit the row removal, score, and level changes in a single frame.
+    // Splice top-to-bottom so the indices do not shift while we work.
+    const sorted = [...clearAnim.rows].sort((a, b) => b - a);
+    const linesCleared = sorted.length;
+    for (const y of sorted) {
+        grid.splice(y, 1);
         grid.unshift(Array(COLS).fill(0));
-        linesCleared++;
-        y++; // recheck same line index after shift
     }
-    if (linesCleared > 0) {
-        lines += linesCleared;
-        const newLevel = Math.floor(lines / 10) + 1;
-        score += SCORE_TABLE[linesCleared] * level;
-        if (newLevel !== level) {
-            level = newLevel;
-            dropInterval = computeDropInterval(level);
-        }
-        updateScore();
+    const points = SCORE_TABLE[linesCleared] * level;
+    lines += linesCleared;
+    if (points > 0) {
+        score += points;
+        awardScore(points, SCORE_TICK_CLEAR_MS);
+        pulseEl(scoreEl, 'score--pulse');
     }
+    const newLevel = Math.floor(lines / 10) + 1;
+    let levelChanged = false;
+    if (newLevel !== level) {
+        level = newLevel;
+        dropInterval = computeDropInterval(level);
+        levelChanged = true;
+    }
+    // Update non-score stats directly; the score text is owned by the
+    // scoreAnim ticker until the tick completes.
+    linesEl.textContent = lines;
+    levelEl.textContent = level;
+    pulseEl(linesEl, 'lines--pulse');
+    if (levelChanged) {
+        pulseEl(levelEl, 'level--pulse');
+    }
+    if (score > currentHighScore) {
+        currentHighScore = score;
+        highScoreEl.textContent = score;
+    }
+    clearAnim = null;
+    spawnNext();
+}
+
+function awardScore(delta, durationMs) {
+    if (delta <= 0) return;
+    // Start the tick from whatever value the sidebar is currently showing,
+    // not from the raw `score`. This way a tick already in flight smoothly
+    // transitions into the new tick without a visible jump.
+    const current = parseInt(scoreEl.textContent, 10) || 0;
+    scoreAnim = {
+        from: current,
+        to: score,
+        startTime: gameTime,
+        duration: durationMs,
+    };
+    showFloater('+' + delta);
+}
+
+function tickScoreAnim(time) {
+    if (!scoreAnim) return;
+    const t = Math.min(1, (time - scoreAnim.startTime) / scoreAnim.duration);
+    // ease-out cubic
+    const e = 1 - Math.pow(1 - t, 3);
+    const value = Math.round(scoreAnim.from + (scoreAnim.to - scoreAnim.from) * e);
+    scoreEl.textContent = value;
+    if (t >= 1) {
+        scoreAnim = null;
+        // Snap to the authoritative score to absorb any rounding drift.
+        scoreEl.textContent = score;
+    }
+}
+
+function pulseEl(el, className) {
+    el.classList.remove(className);
+    // Force a reflow so the animation restarts even when the class is
+    // re-added in the same frame.
+    void el.offsetWidth;
+    el.classList.add(className);
+}
+
+function showFloater(text) {
+    scoreFloaterEl.textContent = text;
+    scoreFloaterEl.classList.remove('score-floater--show');
+    void scoreFloaterEl.offsetWidth;
+    scoreFloaterEl.classList.add('score-floater--show');
 }
 
 function computeDropInterval(forLevel) {
@@ -381,7 +590,19 @@ function nextFromQueue() {
 
 function placePiece() {
     merge(current.matrix, current.pos);
-    clearLines();
+    const fullRows = findFullRows();
+    if (fullRows.length > 0) {
+        // Defer the next-piece spawn until the line-clear animation finishes
+        // (see finishClearAnim). During the animation the current piece is
+        // hidden and the drop counter is frozen, so the playfield reads as
+        // "the rows just got wiped and the rest fell into place."
+        startClearAnim(fullRows);
+        return;
+    }
+    spawnNext();
+}
+
+function spawnNext() {
     const next = nextFromQueue();
     if (!isValidMove(next.matrix, next.pos)) {
         current = next;
@@ -416,8 +637,10 @@ function playerHardDrop() {
         cellsDropped++;
     }
     if (cellsDropped > 0) {
-        score += cellsDropped * 2;
-        updateScore();
+        const bonus = cellsDropped * 2;
+        score += bonus;
+        awardScore(bonus, SCORE_TICK_HARDDROP_MS);
+        pulseEl(scoreEl, 'score--pulse');
     }
     placePiece();
     dropCounter = 0;
@@ -470,13 +693,27 @@ function holdPiece() {
 }
 
 function update(time = 0) {
-    const delta = time - lastTime;
-    lastTime = time;
     if (paused) {
+        // Reset lastTime so the un-pause frame does not deliver a multi-second
+        // delta to the drop counter. gameTime (and therefore the animation
+        // baselines) is not advanced while paused, so in-flight animations
+        // freeze and resume from the same elapsed time on un-pause.
+        lastTime = time;
         draw();
         rafId = requestAnimationFrame(update);
         return;
     }
+    const delta = time - lastTime;
+    lastTime = time;
+    gameTime += delta;
+    if (clearAnim) {
+        tickClearAnim(gameTime);
+        tickScoreAnim(gameTime);
+        draw();
+        rafId = requestAnimationFrame(update);
+        return;
+    }
+    tickScoreAnim(gameTime);
     dropCounter += delta;
     if (dropCounter > dropInterval) {
         playerDrop();
@@ -490,10 +727,13 @@ function togglePause() {
     paused = !paused;
     pausedEl.hidden = !paused;
     if (paused) {
+        document.body.classList.add('paused');
         // Land focus on the Resume button so keyboard / screen-reader users
         // can immediately press Enter. Deferred so the panel is visible when
         // focus moves (otherwise the browser may scroll or skip the focus).
         setTimeout(() => resumeBtn.focus(), 0);
+    } else {
+        document.body.classList.remove('paused');
     }
 }
 
@@ -511,6 +751,11 @@ function startGame() {
     lines = 0;
     level = 1;
     dropInterval = computeDropInterval(level);
+    // Cancel any in-flight animations from a previous game so a stale
+    // clearAnim / scoreAnim from a fast Restart click does not leak in.
+    clearAnim = null;
+    scoreAnim = null;
+    gameTime = 0;
     updateScore();
     drawHold();
     lastTime = performance.now();
@@ -518,6 +763,11 @@ function startGame() {
 }
 
 function triggerGameOver() {
+    // Reconcile sidebar score if a tick is in flight
+    scoreEl.textContent = score;
+    scoreAnim = null;
+    clearAnim = null;
+
     if (rafId) {
         cancelAnimationFrame(rafId);
         rafId = null;
@@ -545,13 +795,16 @@ document.addEventListener('keydown', event => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) {
         event.preventDefault();
     }
-    
+
     if (!rafId) return;
     if (event.key === 'p' || event.key === 'P') {
         togglePause();
         return;
     }
     if (paused) return;
+    // Block gameplay input while a line-clear animation is playing. Pause
+    // (above) is intentionally still allowed.
+    if (clearAnim) return;
     if (event.key === 'c' || event.key === 'C') {
         holdPiece();
         return;
@@ -581,7 +834,12 @@ document.querySelectorAll('.control-btn').forEach(btn => {
     btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         if (!rafId) return;
-        
+        if (paused) return;
+        // Block gameplay input while a line-clear animation is playing. The
+        // pause button is exempt because it is the pause key, not a gameplay
+        // action; mobile users get the same short-circuit by tapping pause.
+        if (clearAnim && btn.dataset.action !== 'pause') return;
+
         const action = btn.dataset.action;
         switch (action) {
             case 'left':
@@ -657,3 +915,12 @@ currentHighScore = readHighScore();
 highScoreEl.textContent = currentHighScore;
 drawNext();
 drawHold();
+
+// Reset any stray floater from a previous page load and clear its text once
+// its CSS animation finishes so the next awardScore() can fire cleanly.
+scoreFloaterEl.classList.remove('score-floater--show');
+scoreFloaterEl.textContent = '';
+scoreFloaterEl.addEventListener('animationend', () => {
+    scoreFloaterEl.classList.remove('score-floater--show');
+    scoreFloaterEl.textContent = '';
+});
