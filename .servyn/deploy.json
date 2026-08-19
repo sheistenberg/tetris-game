@@ -1,0 +1,26 @@
+{
+  "$comment": "Deploy contract consumed by the aef-deploy skill. Separate from .servyn/project.json (build topology, read at a pinned SHA by the webhook fan-out) so a deploy-runbook edit can never perturb a production build. See servyn/docs/servyn-deploy-contract.md.",
+  "version": 1,
+  "apps": [
+    {
+      "name": "tetris-game",
+      "branch": "master",
+      "deployMethod": "buildpack",
+      "domain": "tetris-game.nexrahq.com",
+      "healthChecks": [
+        {
+          "path": "/",
+          "expectStatus": 200,
+          "hostHeader": "tetris-game.nexrahq.com",
+          "via": "host",
+          "note": "Static nginx serve. A 200 on / only proves nginx is up; also confirm the served HTML actually changed when the deploy was meant to change it, since a stale container will answer 200 identically."
+        }
+      ],
+      "rollback": {
+        "strategy": "redeploy-branch",
+        "note": "Buildpack app, no retained image. Roll back by deploying the prior good SHA (push it to a temporary branch and deploy that, then delete the temp branch). Do NOT force-push master."
+      },
+      "notes": "THE BRANCH IS `master`, NOT `main`. This is the single most likely way to get this app wrong — every other app in the fleet except reliq deploys from `main`, so the habit is to assume it. Verified against the live host 2026-08-19: `App deploy source metadata: https://github.com/sheistenberg/tetris-game#6995246`, deployBranch `master`.\n\nNo build step and no tests exist — it is a static site (index.html + style.css + script.js served by nginx:alpine, per the root Dockerfile). There is deliberately no preDeployGate: `docker build` on the host IS the only gate, and inventing a gate command that does not exist in the repo would fail every deploy. If a build or test step is ever added, declare it here.\n\nNo `port` is declared because none is set on the host (`ports:report` is empty) — the Dockerfile's `EXPOSE 80` default is correct and sufficient for this app. Do not add a port mapping speculatively; the port-regression gotcha that affects prebuilt-image apps does not apply to a buildpack app with no explicit mapping.\n\nNever run enable_ssl / dokku letsencrypt. Cloudflare terminates TLS at the edge for *.nexrahq.com and the HTTP-01 challenge will fail behind it."
+    }
+  ]
+}
